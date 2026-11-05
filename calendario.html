@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Miei Appuntamenti - Vintage</title>
+    
+    <!-- TAG PER L'INSTALLAZIONE SU SMARTPHONE -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#e8d5b5">
+    <link rel="apple-touch-icon" href="icona.ico">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <style>
+        body {
+            background-color: #e8d5b5; 
+            font-family: 'Georgia', serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            color: #4a3728;
+            min-height: 100vh;
+        }
+
+        .app-container {
+            background-color: #fdf5e6; 
+            width: 100%;
+            max-width: 550px;
+            padding: 20px;
+            border: 2px solid #c2a379;
+            box-shadow: 5px 5px 15px rgba(0,0,0,0.2), inset 0 0 50px rgba(194, 163, 121, 0.3);
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-variant: small-caps;
+            border-bottom: 2px solid #c2a379;
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+
+        .nav-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .calendar-header {
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+
+        .nav-btn {
+            background: #4a3728;
+            color: #fdf5e6;
+            border: none;
+            padding: 5px 15px;
+            cursor: pointer;
+            font-size: 1.2em;
+            border-radius: 4px;
+            font-family: 'Georgia', serif;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            margin-top: 10px;
+        }
+
+        .day-name {
+            font-weight: bold;
+            font-size: 0.8em;
+            color: #8b7355;
+            padding-bottom: 5px;
+        }
+
+        .day {
+            background: #f9f1d7;
+            border: 1px solid #d3b88c;
+            aspect-ratio: 1 / 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+            position: relative;
+            border-radius: 4px;
+            user-select: none;
+        }
+
+        .day:hover {
+            background: #d4a373 !important;
+            color: white !important;
+            transform: scale(1.05);
+        }
+
+        .day.has-event {
+            background: #d4a373;
+            color: white;
+        }
+
+        .day.has-event::after {
+            content: '●';
+            position: absolute;
+            bottom: 2px;
+            font-size: 10px;
+        }
+
+        .year-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .month-box {
+            background: #f9f1d7;
+            border: 1px solid #d3b88c;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.3s;
+            text-align: center;
+        }
+
+        .month-box:hover { background: #e6d5b0; }
+
+        .month-box.has-event {
+            border: 3px solid #d4a373;
+            background: #fcf3e3;
+        }
+
+        .month-box h4 { margin: 0; font-size: 0.9em; }
+
+        .footer-btns {
+            margin-top: 30px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .btn-action {
+            padding: 10px 15px;
+            background: #4a3728;
+            color: #fdf5e6;
+            border: none;
+            cursor: pointer;
+            font-family: 'Georgia', serif;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        .modal {
+            display: none; 
+            position: fixed; 
+            z-index: 9999; 
+            left: 0; top: 0; width: 100%; height: 100%; 
+            background-color: rgba(0,0,0,0.6);
+            backdrop-filter: blur(3px);
+        }
+
+        .modal-content {
+            background-color: #fdf5e6;
+            margin: 5% auto; 
+            padding: 20px; 
+            border: 3px double #c2a379;
+            width: 85%; 
+            max-width: 450px;
+            max-height: 80vh;
+            overflow-y: auto;
+            border-radius: 10px;
+            text-align: left;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+
+        .modal-content label {
+            font-weight: bold;
+            font-size: 0.9em;
+            display: block;
+            margin-top: 10px;
+        }
+
+        .modal-content textarea, .modal-content select, .modal-content input {
+            width: 100%;
+            margin: 5px 0;
+            padding: 10px;
+            background: #f9f1d7;
+            border: 1px solid #c2a379;
+            font-family: 'Georgia', serif;
+            box-sizing: border-box;
+        }
+
+        textarea {
+            height: 80px;
+            resize: vertical;
+        }
+
+        .alert-options {
+            margin: 15px 0;
+            font-size: 0.9em;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .existing-events {
+            margin: 15px 0;
+            padding: 10px;
+            background: #f0e6d2;
+            border-radius: 5px;
+            border: 1px solid #d3b88c;
+        }
+
+        .event-item {
+            background: white;
+            padding: 8px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            border-left: 4px solid #d4a373;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            font-size: 0.9em;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .event-text {
+            word-break: break-word;
+            flex-grow: 1;
+            margin-right: 10px;
+            white-space: pre-wrap;
+        }
+
+        .event-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .action-btn {
+            border: none;
+            padding: 2px 6px;
+            cursor: pointer;
+            border-radius: 3px;
+            font-size: 0.8em;
+        }
+
+        .edit-btn { background: #f1c40f; color: black; }
+        .del-btn { background: #c0392b; color: white; }
+
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        #saveBtn, #printConfirmBtn {
+            flex: 2;
+            padding: 12px;
+            background: #4a3728;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-family: 'Georgia', serif;
+            font-size: 1em;
+            border-radius: 4px;
+        }
+
+        #cancelBtn {
+            flex: 1;
+            padding: 12px;
+            background: #a0a0a0;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-family: 'Georgia', serif;
+            font-size: 1em;
+            border-radius: 4px;
+        }
+
+        .close {
+            float: right;
+            cursor: pointer;
+            font-size: 28px;
+            font-weight: bold;
+            color: #4a3728;
+        }
+
+        /* --- FOOTER STYLE --- */
+        footer {
+            margin-top: auto;
+            padding: 20px;
+            font-family: 'Georgia', serif;
+            font-size: 0.9em;
+            color: #8b7355;
+            text-align: center;
+            width: 100%;
+        }
+
+        #printArea { display: none; }
+
+        @media print {
+            body * { visibility: hidden; }
+            #printArea, #printArea * { visibility: visible; }
+            #printArea {
+                display: block !important;
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                color: black;
+                background: white;
+                font-family: 'Georgia', serif;
+                padding: 20px;
+            }
+            .print-item {
+                margin-bottom: 20px;
+                border-bottom: 1px dashed #ccc;
+                padding-bottom: 10px;
+                page-break-inside: avoid;
+            }
+            .print-date { font-weight: bold; font-size: 1.2em; }
+            .print-desc { display: block; margin-top: 5px; font-style: italic; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <header>
+            <h1>Miei Appuntamenti</h1>
+            <div class="nav-header">
+                <button class="nav-btn" onclick="changeMonth(-1)">❮</button>
+                <div id="currentMonth" class="calendar-header">Mese Anno</div>
+                <button class="nav-btn" onclick="changeMonth(1)">❯</button>
+            </div>
+        </header>
+
+        <div id="mainView">
+            <div id="calendar" class="calendar-grid"></div>
+        </div>
+
+        <div class="footer-btns">
+            <button class="btn-action" onclick="toggleYearView()">📅 Vista Anno</button>
+            <button class="btn-action" onclick="openPrintModal()">🖨️ Stampa Lista</button>
+            <button class="btn-action" onclick="exportJSON()">💾 Esporta JSON</button>
+            <button class="btn-action" onclick="document.getElementById('importFile').click()">📂 Importa JSON</button>
+            <input type="file" id="importFile" style="display:none" accept=".json" onchange="importJSON(event)">
+        </div>
+    </div>
+
+    <footer>
+        SPsoft Versione 1.0
+    </footer>
+
+    <!-- Modal Inserimento -->
+    <div id="appointmentModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2 style="margin-top:0">Dettagli Giorno</h2>
+            <p id="selectedDateText" style="font-weight: bold; color: #8b7355;"></p>
+            <div id="existingEventsList" class="existing-events"></div>
+            <hr style="border: 0; border-top: 1px solid #c2a379; margin: 20px 0;">
+            <h3 id="formTitle" style="font-size: 1.1em; margin-bottom: 5px;">+ Aggiungi Nuovo</h3>
+            <label>Descrizione:</label>
+            <textarea id="appuntamento" placeholder="Cosa devi fare?"></textarea>
+            <label>Ripetizione:</label>
+            <select id="repeat">
+                <option value="none">Singolo (Solo oggi)</option>
+                <option value="monthly">Mensile (Ogni mese)</option>
+                <option value="yearly">Annuale (Ogni anno)</option>
+            </select>
+            <label>Avvisami:</label>
+            <select id="notifica">
+                <option value="1">1 giorno prima</option>
+                <option value="0">Il giorno stesso</option>
+                <option value="-1">Il giorno dopo</option>
+            </select>
+            <div class="alert-options">
+                <label><input type="checkbox" id="sms"> Invia SMS</label>
+                <label><input type="checkbox" id="email"> Invia Email</label>
+                <label><input type="checkbox" id="insistente" checked> Allerta Insistente 🔔</label>
+            </div>
+            <div class="modal-footer">
+                <button id="saveBtn" onclick="saveAppointment()">Salva Appuntamento</button>
+                <button id="cancelBtn" onclick="closeModal()">Annulla</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Stampa -->
+    <div id="printModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closePrintModal()">&times;</span>
+            <h2 style="margin-top:0">Impostazioni Stampa</h2>
+            <p>Seleziona l'intervallo di date per generare la lista.</p>
+            <label>Data Inizio:</label>
+            <input type="date" id="printStart">
+            <label>Data Fine:</label>
+            <input type="date" id="printEnd">
+            <div class="modal-footer">
+                <button id="printConfirmBtn" onclick="executePrint()">Genera e Stampa</button>
+                <button id="cancelBtn" onclick="closePrintModal()">Annulla</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="printArea"></div>
+
+    <script>
+        // Registrazione del Service Worker per l'installazione
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').then(() => {
+                console.log('Service Worker Registrato!');
+            }).catch(err => console.log('Errore SW:', err));
+        }
+
+        (function() {
+    let currentViewDate = new Date();
+    let rawData = JSON.parse(localStorage.getItem('myAppointments')) || {};
+    let appointments = {};
+    for (let key in rawData) {
+        if (Array.isArray(rawData[key])) { appointments[key] = rawData[key]; } 
+        else { appointments[key] = [rawData[key]]; }
+    }
+    let isYearView = false;
+    let editingIndex = -1;
+
+    const monthText = document.getElementById('currentMonth');
+    const mainView = document.getElementById('mainView');
+    const calendarEl = document.getElementById('calendar');
+    const modal = document.getElementById('appointmentModal');
+    const printModal = document.getElementById('printModal');
+
+    // --- RICHIESTA PERMESSI NOTIFICHE ---
+    if ("Notification" in window) {
+        Notification.requestPermission();
+    }
+
+    // --- IL CUORE: MOTORE DI NOTIFICA ---
+    function checkNotifications() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth() + 1;
+        const day = now.getDate();
+        const dateKey = `${year}-${month}-${day}`;
+
+        // Controlliamo tutti gli appuntamenti
+        for (let key in appointments) {
+            const list = appointments[key];
+            const [aYear, aMonth, aDay] = key.split('-').map(Number);
+
+            list.forEach(app => {
+                let isDueToday = false;
+                if (app.repeat === 'none' && year === aYear && month === aMonth && day === aDay) isDueToday = true;
+                if (app.repeat === 'monthly' && month === aMonth && day === aDay) isDueToday = true;
+                if (app.repeat === 'yearly' && month === aMonth && day === aDay) isDueToday = true;
+
+                if (isDueToday && app.insistente) {
+                    launchInsistentAlert(app.text);
+                }
+            });
+        }
+    }
+
+    function launchInsistentAlert(text) {
+        // 1. Notifica Visiva
+        if (Notification.permission === "granted") {
+            new Notification("🔔 APPUNTAMENTO IMPORTANTE!", {
+                body: `Ricordati di: ${text}. L'allarme suonerà finché non segni come letto!`,
+                icon: "icona.ico"
+            });
+        }
+
+        // 2. Allerta Sonora (Suono di sistema)
+        const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+        audio.play();
+        
+        // 3. Allerta visiva (lo schermo lampeggia leggermente)
+        document.body.style.backgroundColor = "#ffcccc";
+        setTimeout(() => { document.body.style.backgroundColor = "#e8d5b5"; }, 500);
+    }
+
+    // Avvia il controllo ogni 60 secondi
+    setInterval(checkNotifications, 60000);
+
+    // --- RESTO DEL CODICE (Calendario, Modali, etc.) ---
+    function initCalendar() {
+        if (isYearView) renderYearView();
+        else renderMonthView();
+    }
+
+    function renderMonthView() {
+        const year = currentViewDate.getFullYear();
+        const month = currentViewDate.getMonth();
+        const monthNames = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
+        monthText.innerText = `${monthNames[month]} ${year}`;
+        calendarEl.innerHTML = "";
+        calendarEl.style.display = "grid";
+        mainView.style.display = "block";
+        const daysOfWeek = ["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"];
+        daysOfWeek.forEach(day => { calendarEl.innerHTML += `<div class="day-name">${day}</div>`; });
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        for (let i = 0; i < firstDay; i++) { calendarEl.innerHTML += `<div></div>`; }
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dateKey = `${year}-${month + 1}-${day}`;
+            const hasEvent = checkAnyEvent(year, month + 1, day) ? 'has-event' : '';
+            const dayEl = document.createElement('div');
+            dayEl.className = `day ${hasEvent}`;
+            dayEl.innerText = day;
+            dayEl.onclick = () => openModal(dateKey);
+            calendarEl.appendChild(dayEl);
+        }
+    }
+
+    function renderYearView() {
+        const year = currentViewDate.getFullYear();
+        monthText.innerText = `Anno ${year}`;
+        calendarEl.style.display = "none";
+        mainView.innerHTML = `<div class="year-grid" id="yearGrid"></div>`;
+        const yearGrid = document.getElementById('yearGrid');
+        const monthNames = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"];
+        for (let m = 1; m <= 12; m++) {
+            let hasAnyEvent = false;
+            const daysInMonth = new Date(year, m, 0).getDate();
+            for (let d = 1; d <= daysInMonth; d++) {
+                if (checkAnyEvent(year, m, d)) { hasAnyEvent = true; break; }
+            }
+            const mBox = document.createElement('div');
+            mBox.className = `month-box ${hasAnyEvent ? 'has-event' : ''}`;
+            mBox.innerHTML = `<h4>${monthNames[m-1]}</h4>`;
+            mBox.onclick = () => {
+                currentViewDate = new Date(year, m-1, 1);
+                isYearView = false;
+                mainView.innerHTML = `<div id="calendar" class="calendar-grid"></div>`;
+                location.reload(); 
+            };
+            yearGrid.appendChild(mBox);
+        }
+    }
+
+    function checkAnyEvent(year, month, day) {
+        for (let key in appointments) {
+            const list = appointments[key];
+            const [aYear, aMonth, aDay] = key.split('-').map(Number);
+            for (let app of list) {
+                if (app.repeat === 'none' && year === aYear && month === aMonth && day === aDay) return true;
+                if (app.repeat === 'monthly' && month === aMonth && day === aDay) return true;
+                if (app.repeat === 'yearly' && month === aMonth && day === aDay) return true;
+            }
+        }
+        return false;
+    }
+
+    window.changeMonth = function(delta) {
+        currentViewDate.setMonth(currentViewDate.getMonth() + delta);
+        isYearView = false;
+        initCalendar();
+    };
+
+    window.toggleYearView = function() {
+        isYearView = !isYearView;
+        if(!isYearView) {
+            mainView.innerHTML = `<div id="calendar" class="calendar-grid"></div>`;
+            location.reload();
+        } else {
+            initCalendar();
+        }
+    };
+
+    window.openModal = function(dateKey) {
+        window.selectedDate = dateKey;
+        editingIndex = -1;
+        document.getElementById('formTitle').innerText = "+ Aggiungi Nuovo";
+        document.getElementById('selectedDateText').innerText = "Data: " + dateKey;
+        document.getElementById('appuntamento').value = "";
+        const listEl = document.getElementById('existingEventsList');
+        listEl.innerHTML = "<strong>Appuntamenti di oggi:</strong><br>";
+        let foundAny = false;
+        for (let key in appointments) {
+            const list = appointments[key];
+            const [aYear, aMonth, aDay] = key.split('-').map(Number);
+            const [curYear, curMonth, curDay] = dateKey.split('-').map(Number);
+            list.forEach((app, index) => {
+                let isMatch = false;
+                if (app.repeat === 'none' && aYear === curYear && aMonth === curMonth && aDay === curDay) isMatch = true;
+                if (app.repeat === 'monthly' && aMonth === curMonth && aDay === curDay) isMatch = true;
+                if (app.repeat === 'yearly' && aMonth === curMonth && aDay === curDay) isMatch = true;
+                if (isMatch) {
+                    foundAny = true;
+                    const div = document.createElement('div');
+                    div.className = 'event-item';
+                    div.innerHTML = `<div class="event-text">${app.text}</div> 
+                                     <div class="event-actions">
+                                        <button class="action-btn edit-btn" onclick="editEvent('${key}', ${index})">✏️</button>
+                                        <button class="action-btn del-btn" onclick="deleteEvent('${key}', ${index})">X</button>
+                                     </div>`;
+                    listEl.appendChild(div);
+                }
+            });
+        }
+        if(!foundAny) listEl.innerHTML += "<br>Nessun impegno salvato.";
+        modal.style.display = "block";
+    };
+
+    window.editEvent = function(key, index) {
+        const app = appointments[key][index];
+        editingIndex = index;
+        window.editingKey = key;
+        document.getElementById('formTitle').innerText = "Modifica Appuntamento";
+        document.getElementById('appuntamento').value = app.text;
+        document.getElementById('repeat').value = app.repeat;
+        document.getElementById('notifica').value = app.notify;
+        document.getElementById('sms').checked = app.sms;
+        document.getElementById('email').checked = app.email;
+        document.getElementById('insistente').checked = app.insistente;
+        document.getElementById('appuntamento').focus();
+    };
+
+    window.deleteEvent = function(key, index) {
+        if(confirm("Vuoi eliminare questo appuntamento?")) {
+            appointments[key].splice(index, 1);
+            if(appointments[key].length === 0) delete appointments[key];
+            localStorage.setItem('myAppointments', JSON.stringify(appointments));
+            openModal(window.selectedDate);
+            initCalendar();
+        }
+    };
+
+    window.closeModal = function() { modal.style.display = "none"; };
+
+    window.saveAppointment = function() {
+        const text = document.getElementById('appuntamento').value;
+        const repeat = document.getElementById('repeat').value;
+        const notify = document.getElementById('notifica').value;
+        const sms = document.getElementById('sms').checked;
+        const email = document.getElementById('email').checked;
+        const insistente = document.getElementById('insistente').checked;
+        if (!text.trim()) return alert("Scrivi la descrizione!");
+        const appData = { text, repeat, notify, sms, email, insistente };
+        if (editingIndex > -1) {
+            appointments[window.editingKey][editingIndex] = appData;
+        } else {
+            if (!appointments[window.selectedDate]) appointments[window.selectedDate] = [];
+            appointments[window.selectedDate].push(appData);
+        }
+        localStorage.setItem('myAppointments', JSON.stringify(appointments));
+        document.getElementById('appuntamento').value = "";
+        editingIndex = -1;
+        document.getElementById('formTitle').innerText = "+ Aggiungi Nuovo";
+        openModal(window.selectedDate);
+        initCalendar();
+    };
+
+    window.openPrintModal = function() { printModal.style.display = "block"; };
+    window.closePrintModal = function() { printModal.style.display = "none"; };
+
+    window.executePrint = function() {
+        const startStr = document.getElementById('printStart').value;
+        const endStr = document.getElementById('printEnd').value;
+        if (!startStr || !endStr) return alert("Seleziona le date!");
+        const startDate = new Date(startStr);
+        const endDate = new Date(endStr);
+        const printArea = document.getElementById('printArea');
+        printArea.innerHTML = `<h1 style="text-align:center">Lista Appuntamenti</h1><p style="text-align:center">Dal ${startStr} al ${endStr}</p><br>`;
+        let eventsList = [];
+        let tempDate = new Date(startDate);
+        while (tempDate <= endDate) {
+            const y = tempDate.getFullYear();
+            const m = tempDate.getMonth() + 1;
+            const d = tempDate.getDate();
+            for (let key in appointments) {
+                const list = appointments[key];
+                const [aYear, aMonth, aDay] = key.split('-').map(Number);
+                list.forEach(app => {
+                    let match = false;
+                    if (app.repeat === 'none' && y === aYear && m === aMonth && d === aDay) match = true;
+                    if (app.repeat === 'monthly' && m === aMonth && d === aDay) match = true;
+                    if (app.repeat === 'yearly' && m === aMonth && d === aDay) match = true;
+                    if (match) eventsList.push({ date: `${d}-${m}-${y}`, text: app.text, sortDate: new Date(tempDate) });
+                });
+            }
+            tempDate.setDate(tempDate.getDate() + 1);
+        }
+        eventsList.sort((a, b) => a.sortDate - b.sortDate);
+        if (eventsList.length === 0) printArea.innerHTML += "<p style='text-align:center'>Nessun appuntamento.</p>";
+        else eventsList.forEach(ev => {
+            printArea.innerHTML += `<div class="print-item"><span class="print-date">Il ${ev.date} devo fare...</span><span class="print-desc">Descrizione: ${ev.text}</span></div>`;
+        });
+        closePrintModal();
+        window.print();
+    };
+
+    window.exportJSON = function() {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appointments));
+        const dl = document.createElement('a');
+        dl.setAttribute("href", dataStr);
+        dl.setAttribute("download", "miei_appuntamenti.json");
+        dl.click();
+    };
+
+    window.importJSON = function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                appointments = JSON.parse(e.target.result);
+                localStorage.setItem('myAppointments', JSON.stringify(appointments));
+                alert("Importato!");
+                initCalendar();
+            } catch (err) { alert("Errore file JSON."); }
+        };
+        reader.readAsText(file);
+    };
+
+    initCalendar();
+})();
+
+    </script>
+</body>
+</html>
